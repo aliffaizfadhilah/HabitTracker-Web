@@ -1,12 +1,10 @@
-cat >> .gitignore << 'EOF'
-
 # SSL Certificates (SENSITIF!)
 *.pem
 *.key
 *.crt
 backend/nginx/ssl/
 
-# Docker (semua file docker)
+# Docker
 docker-compose.yml
 docker-compose.*.yml
 Dockerfile
@@ -18,16 +16,27 @@ nginx/
 
 # Server config
 backend/nixpacks.toml
-*.toml
 
 # Binary installers
 *.deb
 
-# Testing (sesuai instruksi dosen)
+# Testing
 backend/testing/
 backend/tests/
 frontend/src/__tests__/
 
 # Build artifacts
 frontend/.tsbuildinfo/
-EOF
+
+# Dependencies
+node_modules/
+vendor/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Laravel
+storage/logs/
+bootstrap/cache/
