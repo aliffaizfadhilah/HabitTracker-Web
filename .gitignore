@@ -1,25 +1,33 @@
-# Laravel
-backend/vendor/
-backend/.env
-backend/.env.local
-backend/.env.docker
+cat >> .gitignore << 'EOF'
 
-# React
-frontend/node_modules/
-frontend/dist/
+# SSL Certificates (SENSITIF!)
+*.pem
+*.key
+*.crt
+backend/nginx/ssl/
 
-# Docker
-.env
-.env.local
-.env.docker
+# Docker (semua file docker)
+docker-compose.yml
+docker-compose.*.yml
+Dockerfile
+*.Dockerfile
+docker/
+backend/Dockerfile
+backend/nginx/
+nginx/
 
-# OS
-.DS_Store
-Thumbs.db
+# Server config
+backend/nixpacks.toml
+*.toml
 
-# Windows metadata
-*Zone.Identifier
+# Binary installers
+*.deb
 
-# Editor / tooling config (local only)
-.claude/
-.vscode/
+# Testing (sesuai instruksi dosen)
+backend/testing/
+backend/tests/
+frontend/src/__tests__/
+
+# Build artifacts
+frontend/.tsbuildinfo/
+EOF

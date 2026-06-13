@@ -146,6 +146,10 @@ export default function PostDetailPage() {
 
   const isCircular = post.frame_style !== 'rect'
   const currentUsername = user?.username ?? ''
+  const seedNum = (post.id % 8) + 1
+  const seedUrl = `/storage/posts/seed-${seedNum}.png?v=2`
+  const isRealPhoto = post.image_url && !post.image_url.includes('seed-')
+  const imageUrl = isRealPhoto ? post.image_url! : seedUrl
 
   return (
     <div className="min-h-screen bg-surface font-body">
@@ -189,16 +193,16 @@ export default function PostDetailPage() {
           {isCircular ? (
             <div className="w-full flex items-center justify-center py-6" style={{ background: '#f5f5f5' }}>
               <div style={{ width: '75%', aspectRatio: '1/1', borderRadius: '50%', overflow: 'hidden', background: 'linear-gradient(135deg,#dcfce7,#bbf7d0)' }}>
-                {!imgError ? (
-                  <img src={post.image_url} alt={post.title} onError={() => setImgError(true)} className="w-full h-full object-cover block" />
+                {!imgError && imageUrl ? (
+                  <img src={imageUrl} alt={post.title} onError={() => setImgError(true)} className="w-full h-full object-cover block" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center"><ImageOff size={44} color="#16a34a" /></div>
                 )}
               </div>
             </div>
           ) : (
-            !imgError ? (
-              <img src={post.image_url} alt={post.title} onError={() => setImgError(true)} className="w-full block" />
+            !imgError && imageUrl ? (
+              <img src={imageUrl} alt={post.title} onError={() => setImgError(true)} className="w-full block" />
             ) : (
               <div className="w-full flex flex-col items-center justify-center gap-3" style={{ height: 260, background: 'linear-gradient(135deg,#dcfce7,#bbf7d0)' }}>
                 <ImageOff size={44} color="#16a34a" />

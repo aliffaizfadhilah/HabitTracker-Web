@@ -38,6 +38,20 @@ class PostService
             ->map(fn($p) => $this->formatPost($p, $currentUserId));
     }
 
+    public function getAllPaginated(int $currentUserId, int $perPage, int $page): array
+    {
+        $paginator = $this->postRepo->allVisibleToUserPaginated($currentUserId, $perPage, $page);
+        return [
+            'data' => collect($paginator->items())->map(fn($p) => $this->formatPost($p, $currentUserId))->values()->all(),
+            'meta' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page'    => $paginator->lastPage(),
+                'per_page'     => $paginator->perPage(),
+                'total'        => $paginator->total(),
+            ],
+        ];
+    }
+
     public function getAllSince(int $currentUserId, int $sinceId): Collection
     {
         return $this->postRepo->allVisibleToUserSince($currentUserId, $sinceId)

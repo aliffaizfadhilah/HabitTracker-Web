@@ -18,14 +18,20 @@ class PostController extends Controller
 
         if ($request->boolean('mine')) {
             $posts = $this->postService->getByUser($userId);
-        } else {
-            $since = (int) $request->query('since', 0);
-            $posts = $since > 0
-                ? $this->postService->getAllSince($userId, $since)
-                : $this->postService->getAll($userId);
+            return response()->json(['success' => true, 'data' => $posts]);
         }
 
-        return response()->json(['success' => true, 'data' => $posts]);
+        $since = (int) $request->query('since', 0);
+        if ($since > 0) {
+            $posts = $this->postService->getAllSince($userId, $since);
+            return response()->json(['success' => true, 'data' => $posts]);
+        }
+
+        $page    = max(1, (int) $request->query('page', 1));
+        $perPage = min(50, max(1, (int) $request->query('per_page', 12)));
+        $result  = $this->postService->getAllPaginated($userId, $perPage, $page);
+
+        return response()->json(['success' => true, ...$result]);
     }
 
     public function show(Request $request, int $id): JsonResponse

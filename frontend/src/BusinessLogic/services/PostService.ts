@@ -32,6 +32,18 @@ export interface PostComment {
   user:       PostUser
 }
 
+export interface PaginationMeta {
+  current_page: number
+  last_page:    number
+  per_page:     number
+  total:        number
+}
+
+export interface PaginatedPosts {
+  data: Post[]
+  meta: PaginationMeta
+}
+
 class PostService {
   private static instance: PostService
   private constructor() {}
@@ -46,9 +58,14 @@ class PostService {
     return res.success ? res.data : null
   }
 
-  async getPosts(): Promise<Post[]> {
-    const res = await http.get<{ success: boolean; data: Post[] }>('/api/posts')
-    return res.success ? res.data : []
+  async getPosts(page = 1, perPage = 12): Promise<PaginatedPosts> {
+    const res = await http.get<{ success: boolean; data: Post[]; meta?: PaginationMeta }>(
+      `/api/posts?page=${page}&per_page=${perPage}`
+    )
+    return {
+      data: res.success ? res.data : [],
+      meta: res.meta ?? { current_page: page, last_page: 1, per_page: perPage, total: 0 },
+    }
   }
 
   async getMyPosts(): Promise<Post[]> {

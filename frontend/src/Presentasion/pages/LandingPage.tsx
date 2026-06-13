@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Flame, BarChart2, Bell, Camera, Cookie, Lock, MapPin, Megaphone, Settings, X, Plus, Check, UserPlus, Target, CalendarCheck, TrendingUp } from 'lucide-react'
+import HabitLogo from '../components/HabitLogo'
 
 function getCookie(name: string): string | null {
   const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'))
@@ -65,8 +66,8 @@ async function getLocationFromBrowser(): Promise<{ country?: string; city?: stri
   try {
     const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
       navigator.geolocation.getCurrentPosition(resolve, reject, {
-        timeout: 10000,
-        maximumAge: 0, // selalu minta posisi terbaru, tidak pakai cache
+        timeout: 8000,
+        maximumAge: 300000, // pakai cached position sampai 5 menit
         enableHighAccuracy: false,
       })
     )
@@ -169,22 +170,22 @@ export default function LandingPage() {
   useEffect(() => {
     const stored        = getCookie(COOKIE_KEY)
     const sessionAnswered = sessionStorage.getItem(SESSION_ANSWERED_KEY)
+    const onScroll = () => setScrollY(window.scrollY)
+    window.addEventListener('scroll', onScroll)
 
+    // Load saved preferences so the modal shows last choices, but never track
+    // until the user explicitly accepts in THIS session
     if (stored) {
       const consent = JSON.parse(stored) as CookieConsent
       setCookiePrefs(consent.preferences)
-      if (consent.preferences.analytics) sendTrackingHit()
+      if (sessionAnswered && consent.preferences.analytics) sendTrackingHit()
     }
 
     if (!sessionAnswered) {
       const timer = setTimeout(() => setShowCookieBanner(true), 800)
-      const onScroll = () => setScrollY(window.scrollY)
-      window.addEventListener('scroll', onScroll)
       return () => { clearTimeout(timer); window.removeEventListener('scroll', onScroll) }
     }
 
-    const onScroll = () => setScrollY(window.scrollY)
-    window.addEventListener('scroll', onScroll)
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
@@ -224,7 +225,9 @@ export default function LandingPage() {
         }}
       >
         <div className="flex items-center gap-2.5">
-          <div className="w-[34px] h-[34px] bg-primary rounded-sm flex items-center justify-center text-base text-white">✦</div>
+          <div className="w-[34px] h-[34px] bg-primary rounded-sm flex items-center justify-center">
+            <HabitLogo size={20} color="white" />
+          </div>
           <span className="font-body font-bold text-[18px] text-ink">HabitTracker</span>
         </div>
 
@@ -560,7 +563,9 @@ export default function LandingPage() {
           className="max-w-[640px] mx-auto transition-all duration-700 ease-out"
           style={{ opacity: visible['cta'] ? 1 : 0, transform: visible['cta'] ? 'none' : 'translateY(32px)' }}
         >
-          <div className="w-16 h-16 rounded-[16px] flex items-center justify-center mx-auto mb-6 text-[28px] text-white bg-primary/25">✦</div>
+          <div className="w-16 h-16 rounded-[16px] flex items-center justify-center mx-auto mb-6 bg-primary/25">
+            <HabitLogo size={36} color="white" />
+          </div>
           <h2 className="font-body font-bold mb-4 tracking-[-1px] text-white" style={{ fontSize: 'clamp(28px, 5vw, 48px)' }}>
             Mulai sekarang, gratis.
           </h2>
@@ -583,7 +588,9 @@ export default function LandingPage() {
           <div className="flex justify-between mb-12 flex-wrap gap-10 flex-col md:flex-row">
             <div className="max-w-[280px]">
               <div className="flex items-center gap-2.5 mb-4">
-                <div className="w-8 h-8 bg-primary rounded-sm flex items-center justify-center text-sm text-white">✦</div>
+                <div className="w-8 h-8 bg-primary rounded-sm flex items-center justify-center">
+                  <HabitLogo size={18} color="white" />
+                </div>
                 <span className="font-body font-bold text-[17px] text-white">HabitTracker</span>
               </div>
               <p className="leading-[1.75] mb-5">Platform manajemen kebiasaan yang membantu Anda tumbuh setiap hari, secara konsisten dan terukur.</p>

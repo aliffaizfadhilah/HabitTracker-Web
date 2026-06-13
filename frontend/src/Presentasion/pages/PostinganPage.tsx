@@ -1,290 +1,29 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../BusinessLogic/context/AuthContext'
 import { Sidebar, LogoutModal, useSidebar } from './shared/sideBar'
-import { postService, type Post, type PostComment } from '../../BusinessLogic/services/PostService'
+import { postService, type Post, type PaginationMeta } from '../../BusinessLogic/services/PostService'
 import { useFeedRealtime } from '../../BusinessLogic/hooks/useFeedRealtime'
 import NewPostModal from '../components/NewPostModal'
 import {
-  Menu, Heart, MessageCircle, Trash2, BarChart2, Inbox,
-  ChevronLeft, Send, ImageOff, Check, X, Plus, Search, ArrowUp,
+  Menu, Heart, Inbox,
+  ChevronLeft, Check, X, Plus, Search, ArrowUp,
+  ChevronRight,
 } from 'lucide-react'
 
-function timeAgo(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime()
-  const m = Math.floor(diff / 60000)
-  if (m < 1)  return 'Baru saja'
-  if (m < 60) return `${m} menit lalu`
-  const h = Math.floor(m / 60)
-  if (h < 24) return `${h} jam lalu`
-  const d = Math.floor(h / 24)
-  if (d < 7)  return `${d} hari lalu`
-  return new Date(iso).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
-}
+const PER_PAGE_OPTIONS = [6, 8, 12, 16, 24]
 
-function Avatar({ name, size = 36 }: { name: string | null; size?: number }) {
-  const initials = (name ?? '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
-  return (
-    <div
-      className="rounded-full flex items-center justify-center text-white font-bold shrink-0 font-body"
-      style={{ width: size, height: size, fontSize: size * 0.38, background: 'linear-gradient(135deg,#16a34a,#10b981)' }}
-    >{initials}</div>
-  )
-}
+const CARD_PALETTES = [
+  ['#16a34a', '#059669'],
+  ['#2563eb', '#1d4ed8'],
+  ['#7c3aed', '#6d28d9'],
+  ['#dc2626', '#b91c1c'],
+  ['#d97706', '#b45309'],
+  ['#0891b2', '#0e7490'],
+  ['#db2777', '#be185d'],
+  ['#65a30d', '#4d7c0f'],
+]
 
-function CommentRow({ c, currentUsername, onRemove }: {
-  c: PostComment
-  currentUsername: string
-  onRemove: (id: number) => void
-}) {
-  return (
-    <div className="flex gap-2.5 items-start">
-      <Avatar name={c.user.full_name} size={28} />
-      <div className="flex-1">
-        <div className="bg-[#f8f8f8] rounded-[12px] px-3 py-2">
-          <div className="text-[12px] font-bold text-ink mb-0.5">{c.user.full_name ?? c.user.username}</div>
-          <div className="text-[13px] text-ink leading-relaxed">{c.content}</div>
-        </div>
-        <div className="flex items-center gap-2.5 mt-1">
-          <span className="text-[11px] text-muted">{timeAgo(c.created_at)}</span>
-          {c.user.username === currentUsername && (
-            <button onClick={() => onRemove(c.id)} className="bg-transparent border-none cursor-pointer text-[11px] text-[#ef4444] p-0 font-body">Hapus</button>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function PinDetailModal({ post: initial, currentUsername, onClose, onDelete, onLikeChange }: {
-  post: Post
-  currentUsername: string
-  onClose: () => void
-  onDelete: (id: number) => void
-  onLikeChange: (id: number, liked: boolean, count: number) => void
-}) {
-  const [liked,          setLiked]          = useState(initial.liked_by_me)
-  const [likesCount,     setLikesCount]     = useState(initial.likes_count)
-  const [liking,         setLiking]         = useState(false)
-  const [imgError,       setImgError]       = useState(false)
-  const [comments,       setComments]       = useState<PostComment[]>([])
-  const [loadingComments,setLoadingComments]= useState(true)
-  const [commentInput,   setCommentInput]   = useState('')
-  const [sending,        setSending]        = useState(false)
-  const [commentsCount,  setCommentsCount]  = useState(initial.comments_count)
-  const [confirmDelete,  setConfirmDelete]  = useState(false)
-  const [deleting,       setDeleting]       = useState(false)
-
-  useEffect(() => {
-    postService.getComments(initial.id)
-      .then(data => { setComments(data); setCommentsCount(data.length) })
-      .finally(() => setLoadingComments(false))
-  }, [initial.id])
-
-  const toggleLike = async () => {
-    if (liking) return
-    setLiking(true)
-    const res = await postService.toggleLike(initial.id)
-    if (res.success) {
-      setLiked(res.liked); setLikesCount(res.likes_count)
-      onLikeChange(initial.id, res.liked, res.likes_count)
-    }
-    setLiking(false)
-  }
-
-  const sendComment = async () => {
-    if (!commentInput.trim() || sending) return
-    setSending(true)
-    const res = await postService.addComment(initial.id, commentInput.trim())
-    if (res.success && res.data) {
-      setComments(prev => [...prev, res.data!])
-      setCommentsCount(c => c + 1)
-      setCommentInput('')
-    }
-    setSending(false)
-  }
-
-  const removeComment = async (commentId: number) => {
-    const res = await postService.deleteComment(initial.id, commentId)
-    if (res.success) {
-      setComments(prev => prev.filter(c => c.id !== commentId))
-      setCommentsCount(c => Math.max(0, c - 1))
-    }
-  }
-
-  const handleDelete = async () => {
-    setDeleting(true)
-    const res = await postService.deletePost(initial.id)
-    if (res.success) { onDelete(initial.id); onClose() }
-    setDeleting(false)
-  }
-
-  return (
-    <div
-      className="fixed inset-0 z-[600] flex items-center justify-center p-3"
-      style={{ background: 'rgba(0,0,0,0.78)' }}
-      onClick={onClose}
-    >
-      <div
-        className="bg-white rounded-[24px] overflow-hidden w-full flex flex-col"
-        style={{ maxWidth: 460, maxHeight: '92vh' }}
-        onClick={e => e.stopPropagation()}
-      >
-        {/* ── Top bar ── */}
-        <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-[#f0f0f0] shrink-0">
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-full border-none cursor-pointer flex items-center justify-center bg-[#f3f4f6]"
-          ><ChevronLeft size={18} color="#333" /></button>
-
-          <div className="flex items-center gap-2 ml-auto">
-            <button
-              onClick={toggleLike}
-              disabled={liking}
-              className="flex items-center gap-1.5 bg-transparent border-none cursor-pointer text-[13px] font-semibold font-body px-2.5 py-1.5 rounded-full disabled:opacity-60 transition-colors"
-              style={{ color: liked ? '#ef4444' : '#555', background: liked ? '#fef2f2' : '#f3f4f6' }}
-            >
-              <Heart size={16} fill={liked ? '#ef4444' : 'none'} color={liked ? '#ef4444' : '#555'} />
-              {likesCount}
-            </button>
-
-            <span className="flex items-center gap-1.5 text-[13px] text-muted font-semibold font-body px-2.5 py-1.5 rounded-full bg-[#f3f4f6]">
-              <MessageCircle size={16} /> {commentsCount}
-            </span>
-
-            {initial.is_mine && (
-              <button
-                onClick={() => setConfirmDelete(true)}
-                className="w-8 h-8 rounded-full border-none cursor-pointer flex items-center justify-center bg-[#fef2f2]"
-              ><Trash2 size={15} color="#ef4444" /></button>
-            )}
-          </div>
-        </div>
-
-        {/* ── Scrollable body ── */}
-        <div className="overflow-y-auto flex-1">
-          {/* Image */}
-          {initial.frame_style !== 'rect' ? (
-            <div className="w-full flex items-center justify-center py-6" style={{ background: '#f5f5f5' }}>
-              <div style={{ width: '75%', aspectRatio: '1/1', borderRadius: '50%', overflow: 'hidden', background: 'linear-gradient(135deg,#dcfce7,#bbf7d0)' }}>
-                {!imgError && (
-                  <img
-                    src={initial.image_url}
-                    alt={initial.title}
-                    onError={() => setImgError(true)}
-                    className="w-full h-full object-cover block"
-                  />
-                )}
-                {imgError && (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <ImageOff size={44} color="#16a34a" />
-                  </div>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div style={{ aspectRatio: '256/455', overflow: 'hidden' }}>
-              {!imgError ? (
-                <img
-                  src={initial.image_url}
-                  alt={initial.title}
-                  onError={() => setImgError(true)}
-                  className="w-full h-full block"
-                  style={{ objectFit: 'cover', display: 'block' }}
-                />
-              ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center gap-3" style={{ background: 'linear-gradient(135deg,#dcfce7,#bbf7d0)' }}>
-                  <ImageOff size={44} color="#16a34a" />
-                  <span className="text-sm text-muted">Gambar tidak tersedia</span>
-                </div>
-              )}
-            </div>
-          )}
-
-          <div className="p-5 flex flex-col gap-4">
-            {/* Title & caption */}
-            <div>
-              <h2 className="font-body text-[20px] font-bold text-ink m-0 mb-1 leading-snug">{initial.title}</h2>
-              {initial.caption && (
-                <p className="text-[14px] text-muted leading-relaxed m-0">{initial.caption}</p>
-              )}
-            </div>
-
-            {/* Habit badge */}
-            {initial.habit_title && (
-              <div className="flex items-center justify-between bg-[#f0fdf4] rounded-xl px-4 py-2.5">
-                <span className="text-[13px] text-[#16a34a] font-semibold flex items-center gap-1.5">
-                  <BarChart2 size={13} /> {initial.habit_title}
-                </span>
-                {initial.progress_percent != null && (
-                  <span className="text-[14px] font-bold text-[#16a34a]">{Number(initial.progress_percent).toFixed(0)}%</span>
-                )}
-              </div>
-            )}
-
-            {/* User info */}
-            <div className="flex items-center gap-3 pb-3 border-b border-[#f5f5f5]">
-              <Avatar name={initial.user.full_name} size={36} />
-              <div>
-                <div className="text-[13px] font-bold text-ink">{initial.user.full_name ?? initial.user.username}</div>
-                <div className="text-[11px] text-muted">@{initial.user.username} · {timeAgo(initial.created_at)}</div>
-              </div>
-            </div>
-
-            {/* Comments */}
-            <div>
-              <h4 className="text-[13px] font-bold text-ink m-0 mb-3">{commentsCount} Komentar</h4>
-              {loadingComments && <div className="text-xs text-muted py-2">Memuat komentar...</div>}
-              {!loadingComments && comments.length === 0 && (
-                <div className="text-xs text-muted italic py-2">Belum ada komentar.</div>
-              )}
-              <div className="flex flex-col gap-3 mb-4">
-                {comments.map(c => (
-                  <CommentRow key={c.id} c={c} currentUsername={currentUsername} onRemove={removeComment} />
-                ))}
-              </div>
-
-              {/* Comment input */}
-              <div className="flex gap-2 items-center">
-                <input
-                  value={commentInput}
-                  onChange={e => setCommentInput(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendComment() } }}
-                  placeholder="Tulis komentar..."
-                  maxLength={500}
-                  className="flex-1 px-3.5 py-2 rounded-full border-[1.5px] border-[#e5e7eb] text-[13px] font-body outline-none text-ink bg-[#fafafa] focus:border-[#16a34a]"
-                />
-                <button
-                  onClick={sendComment}
-                  disabled={sending || !commentInput.trim()}
-                  className="w-9 h-9 rounded-full border-none cursor-pointer flex items-center justify-center disabled:opacity-40 transition-colors"
-                  style={{ background: commentInput.trim() ? '#16a34a' : '#e5e7eb' }}
-                >
-                  <Send size={15} color="white" />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Delete confirm panel */}
-        {confirmDelete && (
-          <div className="px-4 py-3.5 border-t border-[#fecaca] bg-[#fef2f2] shrink-0">
-            <p className="text-[13px] text-[#dc2626] font-semibold m-0 mb-3 text-center">
-              Hapus postingan ini? Tidak dapat dikembalikan.
-            </p>
-            <div className="flex gap-2">
-              <button onClick={() => setConfirmDelete(false)} className="flex-1 py-2 rounded-xl border border-[#d1d5db] bg-white cursor-pointer text-[13px] font-body text-muted">Batal</button>
-              <button onClick={handleDelete} disabled={deleting} className="flex-1 py-2 rounded-xl border-none bg-[#ef4444] cursor-pointer text-[13px] font-bold font-body text-white disabled:opacity-60">
-                {deleting ? 'Menghapus...' : 'Ya, Hapus'}
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
 
 function PinCard({ post, onLikeChange, onClick }: {
   post: Post
@@ -302,8 +41,6 @@ function PinCard({ post, onLikeChange, onClick }: {
     setLiked(post.liked_by_me)
   }, [post.liked_by_me])
 
-  const isCircular = post.frame_style !== 'rect'
-
   const toggleLike = async (e: React.MouseEvent) => {
     e.stopPropagation()
     if (liking) return
@@ -316,121 +53,60 @@ function PinCard({ post, onLikeChange, onClick }: {
     setLiking(false)
   }
 
-  if (isCircular) {
-    return (
-      <div
-        className="relative rounded-[16px] cursor-pointer bg-white"
-        style={{ breakInside: 'avoid', marginBottom: 8, border: '1.5px solid #f0f0f0', overflow: 'hidden' }}
-        onMouseEnter={() => setHovering(true)}
-        onMouseLeave={() => setHovering(false)}
-        onClick={() => onClick(post)}
-      >
-        <div className="p-4 pb-2">
-          <div className="relative" style={{ aspectRatio: '1/1' }}>
-            {/* Circular image */}
-            <div
-              className="w-full h-full overflow-hidden"
-              style={{ borderRadius: '50%', background: '#f3f4f6' }}
-            >
-              {!imgError ? (
-                <img
-                  src={post.image_url}
-                  alt={post.title}
-                  onError={() => setImgError(true)}
-                  className="w-full h-full object-cover block"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg,#dcfce7,#bbf7d0)' }}>
-                  <BarChart2 size={28} color="#16a34a" />
-                </div>
-              )}
-            </div>
-
-            {/* Hover overlay on circle */}
-            <div
-              className="absolute inset-0 pointer-events-none transition-opacity duration-200"
-              style={{ borderRadius: '50%', background: 'rgba(0,0,0,0.10)', opacity: hovering ? 1 : 0 }}
-            />
-
-            {/* Like button */}
-            <div
-              className="absolute top-1 right-1 transition-all duration-200"
-              style={{ opacity: hovering || liked ? 1 : 0, transform: hovering || liked ? 'scale(1)' : 'scale(0.8)' }}
-            >
-              <button
-                onClick={toggleLike}
-                disabled={liking}
-                className="w-8 h-8 rounded-full border-none cursor-pointer flex items-center justify-center shadow-md transition-transform active:scale-90 disabled:opacity-60"
-                style={{ background: liked ? '#ef4444' : 'rgba(255,255,255,0.95)' }}
-              >
-                <Heart size={15} fill={liked ? 'white' : 'none'} color={liked ? 'white' : '#333'} strokeWidth={liked ? 0 : 2} />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Text below circle */}
-        <div className="px-3 pb-3 text-center">
-          <div className="text-[12px] font-bold text-ink leading-snug truncate">{post.title}</div>
-          <div
-            className="overflow-hidden transition-all duration-300"
-            style={{ maxHeight: liked ? 60 : 0, opacity: liked ? 1 : 0 }}
-          >
-            {post.caption && (
-              <div className="text-[11px] text-muted mt-1 leading-snug" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                {post.caption}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    )
-  }
+  const palette = CARD_PALETTES[post.id % CARD_PALETTES.length]
+  const seedNum = (post.id % 8) + 1
+  const seedUrl = `/storage/posts/seed-${seedNum}.png?v=2`
+  const isRealPhoto = post.image_url && !post.image_url.includes('seed-')
+  const displayUrl = isRealPhoto ? post.image_url! : seedUrl
 
   return (
     <div
-      className="relative rounded-[16px] overflow-hidden cursor-pointer bg-[#efefef]"
+      className="relative rounded-[16px] overflow-hidden cursor-pointer"
       style={{ breakInside: 'avoid', marginBottom: 8 }}
       onMouseEnter={() => setHovering(true)}
       onMouseLeave={() => setHovering(false)}
       onClick={() => onClick(post)}
     >
-      <div style={{ aspectRatio: '256/455', overflow: 'hidden' }}>
+      <div style={{ aspectRatio: '256/455', position: 'relative' }}>
+
+        {/* Background: foto asli (jika upload) atau seed cycling (dummy) */}
         {!imgError ? (
           <img
-            src={post.image_url}
+            src={displayUrl}
             alt={post.title}
             onError={() => setImgError(true)}
-            className="w-full h-full block"
-            style={{ objectFit: 'cover', display: 'block' }}
+            className="absolute inset-0 w-full h-full"
+            style={{ objectFit: 'cover' }}
           />
         ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center gap-2" style={{ background: 'linear-gradient(135deg,#dcfce7,#bbf7d0)' }}>
-            <BarChart2 size={32} color="#16a34a" />
-            <span className="text-xs text-muted">Habit Progress</span>
-          </div>
+          <div className="absolute inset-0" style={{
+            background: `linear-gradient(145deg, ${palette[0]}, ${palette[1]})`
+          }} />
         )}
-      </div>
 
-      <div
-        className="absolute inset-0 pointer-events-none transition-opacity duration-200"
-        style={{ background: 'rgba(0,0,0,0.10)', opacity: hovering ? 1 : 0 }}
-      />
+        {/* Hover overlay */}
+        <div
+          className="absolute inset-0 pointer-events-none transition-opacity duration-200"
+          style={{ background: 'rgba(0,0,0,0.12)', opacity: hovering ? 1 : 0 }}
+        />
 
-      <div
-        className="absolute top-2.5 right-2.5 transition-all duration-200"
-        style={{ opacity: hovering || liked ? 1 : 0, transform: hovering || liked ? 'scale(1)' : 'scale(0.8)' }}
-      >
-        <button
-          onClick={toggleLike}
-          disabled={liking}
-          className="w-9 h-9 rounded-full border-none cursor-pointer flex items-center justify-center shadow-md transition-transform active:scale-90 disabled:opacity-60"
-          style={{ background: liked ? '#ef4444' : 'rgba(255,255,255,0.95)' }}
+        {/* Like button */}
+        <div
+          className="absolute top-2.5 right-2.5 transition-all duration-200"
+          style={{ opacity: hovering || liked ? 1 : 0, transform: hovering || liked ? 'scale(1)' : 'scale(0.8)' }}
         >
-          <Heart size={17} fill={liked ? 'white' : 'none'} color={liked ? 'white' : '#333'} strokeWidth={liked ? 0 : 2} />
-        </button>
+          <button
+            onClick={toggleLike}
+            disabled={liking}
+            className="w-9 h-9 rounded-full border-none cursor-pointer flex items-center justify-center shadow-md transition-transform active:scale-90 disabled:opacity-60"
+            style={{ background: liked ? '#ef4444' : 'rgba(255,255,255,0.95)' }}
+          >
+            <Heart size={17} fill={liked ? 'white' : 'none'} color={liked ? 'white' : '#333'} strokeWidth={liked ? 0 : 2} />
+          </button>
+        </div>
       </div>
 
+      {/* Caption di bawah card */}
       {(post.title || post.caption) && (
         <div className="px-3 py-2.5 bg-white border-t border-[#f0f0f0]">
           {post.title && (
@@ -459,6 +135,10 @@ export default function PostinganPage() {
   const [searchQuery,   setSearchQuery]   = useState('')
   const [cursor,        setCursor]        = useState(0)
   const [rtReady,       setRtReady]       = useState(false)
+  const [page,          setPage]          = useState(1)
+  const [perPage,       setPerPage]       = useState(12)
+  const [meta,          setMeta]          = useState<PaginationMeta>({ current_page: 1, last_page: 1, per_page: 12, total: 0 })
+  const hasPagination = !loading && !searchQuery && meta.last_page > 1
 
   const { pendingPosts, transport, clearPending } = useFeedRealtime(cursor, rtReady)
 
@@ -469,16 +149,23 @@ export default function PostinganPage() {
     setTimeout(() => setToast(null), 3000)
   }
 
-  useEffect(() => {
-    postService.getPosts()
-      .then(data => {
+  const loadPosts = useCallback((p: number, pp: number) => {
+    setLoading(true)
+    postService.getPosts(p, pp)
+      .then(({ data, meta: m }) => {
         setPosts(data)
-        setCursor(data.length > 0 ? Math.max(...data.map(p => p.id)) : 0)
+        setMeta(m)
+        setCursor(data.length > 0 ? Math.max(...data.map(post => post.id)) : 0)
         setRtReady(true)
+        window.scrollTo({ top: 0, behavior: 'smooth' })
       })
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
+
+  useEffect(() => {
+    loadPosts(page, perPage)
+  }, [page, perPage, loadPosts])
 
   const handleLikeChange = (id: number, liked: boolean, count: number) => {
     setPosts(prev => prev.map(p => p.id === id ? { ...p, liked_by_me: liked, likes_count: count } : p))
@@ -495,11 +182,6 @@ export default function PostinganPage() {
   }
 
   const transportLabel: Record<string, string> = { ws: 'WS', sse: 'SSE', polling: 'Polling' }
-
-  const handleDelete = (id: number) => {
-    setPosts(prev => prev.filter(p => p.id !== id))
-    showToast('success', 'Postingan berhasil dihapus.')
-  }
 
   const cols = isMobile ? 2 : 3
   const colWidth = `calc((100% - ${(cols - 1) * 8}px) / ${cols})`
@@ -533,9 +215,27 @@ export default function PostinganPage() {
               onClick={() => setSidebarOpen(o => !o)}
               className="w-9 h-9 border border-border rounded-[8px] bg-white cursor-pointer flex items-center justify-center shrink-0"
             ><Menu size={16} /></button>
-            <div>
-              <h1 className="font-body text-xl font-bold text-ink m-0">Feed</h1>
-              <p className="text-[12px] text-muted m-0 mt-0.5">Progres habit semua pengguna</p>
+            <div className="flex-1 min-w-0">
+              <h1 className="font-body text-xl font-bold text-ink m-0">Postingan</h1>
+              <p className="text-[12px] text-muted m-0 mt-0.5">
+                {meta.total > 0
+                  ? `${meta.total} postingan · halaman ${meta.current_page} dari ${meta.last_page}`
+                  : 'Progres habit semua pengguna'}
+              </p>
+            </div>
+            {/* Per-page selector */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span className="text-[11px] text-muted hidden sm:inline">Tampil</span>
+              <select
+                value={perPage}
+                onChange={e => { setPerPage(Number(e.target.value)); setPage(1) }}
+                className="text-[12px] font-body border border-border rounded-lg px-2 py-1.5 bg-white text-ink outline-none cursor-pointer"
+              >
+                {PER_PAGE_OPTIONS.map(n => (
+                  <option key={n} value={n}>{n}</option>
+                ))}
+              </select>
+              <span className="text-[11px] text-muted hidden sm:inline">/ hal</span>
             </div>
           </div>
           {/* Search bar */}
@@ -571,7 +271,7 @@ export default function PostinganPage() {
           </button>
         )}
 
-        {/* Transport indicator (dev helper) */}
+        {/* Transport indicator */}
         {transport !== 'idle' && (
           <div className="mb-2 flex justify-end">
             <span className="text-[10px] text-muted px-2 py-0.5 rounded-full bg-[#f3f4f6]">
@@ -632,7 +332,7 @@ export default function PostinganPage() {
 
         {/* Masonry grid */}
         {!loading && filteredPosts.length > 0 && (
-          <div className="flex gap-2">
+          <div className={`flex gap-2 ${hasPagination ? 'pb-24' : 'pb-20'}`}>
             {columns.map((col, ci) => (
               <div key={ci} style={{ width: colWidth }}>
                 {col.map(post => (
@@ -649,41 +349,82 @@ export default function PostinganPage() {
         )}
       </main>
 
-      {/* FAB — tombol posting bulat */}
+      {/* Sticky pagination bar */}
+      {hasPagination && (
+        <div className="fixed bottom-0 left-0 right-0 z-[300] bg-white border-t border-border px-4 py-3 flex items-center justify-between gap-2"
+          style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}>
+          <button
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={meta.current_page <= 1}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-border bg-white text-[13px] font-semibold font-body text-ink cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed transition-colors"
+          >
+            <ChevronLeft size={15} />
+            Sebelumnya
+          </button>
+
+          <div className="flex items-center gap-1 flex-1 justify-center overflow-x-auto">
+            {Array.from({ length: meta.last_page }, (_, i) => i + 1)
+              .filter(n => n === 1 || n === meta.last_page || Math.abs(n - meta.current_page) <= 1)
+              .reduce<(number | '...')[]>((acc, n, idx, arr) => {
+                if (idx > 0 && typeof arr[idx - 1] === 'number' && (n as number) - (arr[idx - 1] as number) > 1) acc.push('...')
+                acc.push(n)
+                return acc
+              }, [])
+              .map((item, idx) =>
+                item === '...'
+                  ? <span key={`d-${idx}`} className="w-7 text-center text-[13px] text-muted shrink-0">…</span>
+                  : <button
+                      key={item}
+                      onClick={() => setPage(item as number)}
+                      className="w-8 h-8 rounded-lg border-none cursor-pointer text-[13px] font-semibold font-body transition-colors shrink-0"
+                      style={{
+                        background: meta.current_page === item ? '#16a34a' : '#f3f4f6',
+                        color: meta.current_page === item ? 'white' : '#374151',
+                      }}
+                    >{item}</button>
+              )
+            }
+          </div>
+
+          <button
+            onClick={() => setPage(p => Math.min(meta.last_page, p + 1))}
+            disabled={meta.current_page >= meta.last_page}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-border bg-white text-[13px] font-semibold font-body text-ink cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed transition-colors"
+          >
+            Selanjutnya
+            <ChevronRight size={15} />
+          </button>
+        </div>
+      )}
+
+      {/* FAB */}
       <button
         onClick={() => setShowNewPost(true)}
-        className="fixed z-[400] border-none cursor-pointer flex items-center justify-center shadow-lg transition-transform active:scale-95 hover:scale-105"
+        className="fixed z-[400] border-none cursor-pointer flex items-center justify-center shadow-lg transition-all active:scale-95 hover:scale-105"
         style={{
-          bottom: 28, right: 28,
-          width: 56, height: 56,
+          bottom: hasPagination ? 76 : 28,
+          right: 20,
+          width: 52, height: 52,
           borderRadius: '50%',
           background: 'linear-gradient(135deg,#16a34a,#10b981)',
           boxShadow: '0 4px 18px rgba(22,163,74,0.45)',
         }}
         title="Buat Postingan"
       >
-        <Plus size={26} color="white" strokeWidth={2.5} />
+        <Plus size={24} color="white" strokeWidth={2.5} />
       </button>
 
-      {/* New Post Modal */}
       {showNewPost && (
         <NewPostModal
           onClose={() => setShowNewPost(false)}
           onPosted={() => {
             setShowNewPost(false)
             showToast('success', 'Postingan berhasil dibuat!')
-            setLoading(true)
-            postService.getPosts()
-              .then(data => {
-                setPosts(data)
-                if (data.length > 0) setCursor(Math.max(...data.map(p => p.id)))
-              })
-              .catch(() => {})
-              .finally(() => setLoading(false))
+            setPage(1)
+            loadPosts(1, perPage)
           }}
         />
       )}
-
 
       {showLogout && (
         <LogoutModal

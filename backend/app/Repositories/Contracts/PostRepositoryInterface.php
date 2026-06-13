@@ -4,12 +4,14 @@ namespace App\Repositories\Contracts;
 
 use App\Models\Post;
 use App\Models\PostComment;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 
 interface PostRepositoryInterface
 {
     public function allWithUsers(): Collection;
     public function allVisibleToUser(int $userId): Collection;
+    public function allVisibleToUserPaginated(int $userId, int $perPage, int $page): LengthAwarePaginator;
     public function allByUser(int $userId): Collection;
     public function allVisibleToUserSince(int $userId, int $sinceId): Collection;
     public function findById(int $id): ?Post;

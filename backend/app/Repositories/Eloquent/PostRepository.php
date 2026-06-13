@@ -6,6 +6,7 @@ use App\Models\Post;
 use App\Models\PostComment;
 use App\Models\PostLike;
 use App\Repositories\Contracts\PostRepositoryInterface;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -35,6 +36,17 @@ class PostRepository implements PostRepositoryInterface
             })
             ->orderBy('created_at', 'desc')
             ->get();
+    }
+
+    public function allVisibleToUserPaginated(int $userId, int $perPage, int $page): LengthAwarePaginator
+    {
+        return Post::with(['user', 'likes'])
+            ->where(function ($q) use ($userId) {
+                $q->where('is_private', false)
+                  ->orWhere('user_id', $userId);
+            })
+            ->orderBy('created_at', 'desc')
+            ->paginate($perPage, ['*'], 'page', $page);
     }
 
     public function allVisibleToUserSince(int $userId, int $sinceId): Collection

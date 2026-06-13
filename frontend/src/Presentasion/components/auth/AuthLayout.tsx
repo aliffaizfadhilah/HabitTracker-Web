@@ -2,6 +2,7 @@ import { type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { GlobalStyles } from '../../../BusinessLogic/factories/ComponentFactory'
 import { Target, Flame, BarChart2 } from 'lucide-react'
+import HabitLogo from '../HabitLogo'
 
 interface AuthLayoutProps {
   children: ReactNode
@@ -38,7 +39,7 @@ export default function AuthLayout({ children, title, subtitle }: AuthLayoutProp
 
         {/* Logo */}
         <div onClick={() => navigate('/')} className="flex items-center gap-2.5 cursor-pointer relative z-[1]">
-          <div className="w-[38px] h-[38px] bg-white/10 backdrop-blur-[8px] rounded-[10px] flex items-center justify-center text-xl border border-white/20">✦</div>
+          <div className="w-[38px] h-[38px] bg-white/10 backdrop-blur-[8px] rounded-[10px] flex items-center justify-center border border-white/20"><HabitLogo size={20} color="white" /></div>
           <span className="font-body font-bold text-xl text-white">HabitTracker</span>
         </div>
 
@@ -67,7 +68,7 @@ export default function AuthLayout({ children, title, subtitle }: AuthLayoutProp
       <div className="flex-1 flex items-center justify-center p-12 px-8 overflow-y-auto">
         <div className="w-full max-w-[420px] animate-fade-up">
           <div className="flex items-center gap-2 mb-8">
-            <div className="w-8 h-8 bg-primary rounded-[8px] flex items-center justify-center text-sm text-white">✦</div>
+            <div className="w-8 h-8 bg-primary rounded-[8px] flex items-center justify-center"><HabitLogo size={16} color="white" /></div>
             <span className="font-body font-bold text-[17px] text-ink">HabitTracker</span>
           </div>
           <div className="mb-7">

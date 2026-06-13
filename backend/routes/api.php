@@ -104,6 +104,16 @@ Route::middleware('auth.jwt')->group(function () {
 
 // ─── VISITOR TRACKING (Public) ───────────────────────────────────────────────
 Route::post('/track', function (\Illuminate\Http\Request $request) {
+    // Server-side consent guard: reject if analytics cookie not set/accepted
+    $consentRaw = $request->cookie('habittracker_cookie_consent');
+    if (!$consentRaw) {
+        return response()->json(['success' => true]);
+    }
+    $consent = json_decode(urldecode($consentRaw), true);
+    if (empty($consent['preferences']['analytics'])) {
+        return response()->json(['success' => true]);
+    }
+
     $ua     = \UAParser\Parser::create()->parse($request->userAgent());
     $detect = new \Detection\MobileDetect();
     $detect->setUserAgent($request->userAgent());

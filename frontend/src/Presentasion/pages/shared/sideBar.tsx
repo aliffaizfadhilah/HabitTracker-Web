@@ -4,6 +4,7 @@ import {
   Home, CheckSquare, Bell, Camera, User,
   LogOut, X,
 } from 'lucide-react'
+import HabitLogo from '../../components/HabitLogo'
 
 export interface SidebarProps {
   open?: boolean
@@ -110,8 +111,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
             onClick={() => handleNav('/dashboard')}
             className="flex items-center gap-2.5 cursor-pointer"
           >
-            <div className="w-8 h-8 rounded-[9px] shrink-0 bg-gradient-to-br from-primary to-accent flex items-center justify-center text-[15px] text-white">
-              ✦
+            <div className="w-8 h-8 rounded-[9px] shrink-0 bg-gradient-to-br from-primary to-accent flex items-center justify-center">
+              <HabitLogo size={16} color="white" />
             </div>
             <span className="font-body font-bold text-[15px] text-ink">HabitTracker</span>
           </div>

@@ -128,59 +128,146 @@ docker compose exec php bash
 
 ---
 
-## Struktur Proyek
 
-```
-habit-tracker1/
-├── frontend/          # React + Vite + TypeScript
-│   └── src/
-│       ├── BusinessLogic/   # Hooks, services, context
-│       └── Presentasion/    # Pages & components
-├── backend/           # Laravel (PHP)
-│   ├── app/
-│   │   ├── Http/Controllers/
-│   │   ├── Models/
-│   │   └── Services/
-│   ├── database/migrations/
-│   └── routes/api.php
-├── nginx/             # Konfigurasi web server
-├── docker-compose.yml
-└── README.md
-```
+# Cara Penggunaan Web
+
+## 1. Login Admin / User
+
+1. Buka halaman web.
+2. Masukkan email dan password.
+3. Tekan tombol Login.
+4. Sistem akan memverifikasi akun.
+5. Pengguna diarahkan ke dashboard.
 
 ---
 
-## Fitur Aplikasi
+## 2. Mengelola Habit
 
-| Fitur | Keterangan |
-|---|---|
-| Auth | Register, Login, Forgot Password via OTP email |
-| Habit | Buat, edit, hapus habit dengan periode dan kategori |
-| Dashboard | Progress mingguan, streak, insight otomatis |
-| Reminder | Notifikasi pengingat per habit |
-| Postingan | Bagikan progress habit sebagai postingan publik |
-| Profil | Edit profil, ganti password |
-| Admin | Kelola user, postingan, laporan, data pengunjung |
+1. Buka menu Habit.
+2. Tambah habit baru.
+3. Edit data habit bila diperlukan.
+4. Hapus habit jika sudah tidak digunakan.
 
 ---
 
-## Troubleshooting
+## 3. Checklist Harian
 
-**Port 5173 sudah dipakai:**
-```bash
-# Ganti port di docker-compose.yml bagian frontend:
-ports:
-  - "3000:80"   # ganti 5173 ke port lain
-```
+1. Buka daftar habit.
+2. Pilih habit yang ingin diselesaikan.
+3. Klik tombol checklist.
+4. Sistem menyimpan aktivitas harian.
+5. Progress dan streak diperbarui otomatis.
 
-**Migrasi gagal / error database:**
-```bash
-# Pastikan container mysql sudah running dulu
-docker compose ps
-# Tunggu status mysql jadi "healthy" baru jalankan migrate
-```
+---
 
-**Email OTP tidak terkirim:**
-- Pastikan `MAIL_USERNAME` dan `MAIL_PASSWORD` sudah diisi di `.env`
-- Gunakan **App Password** Gmail, bukan password akun biasa
-- Aktifkan 2FA di akun Gmail terlebih dahulu sebelum generate App Password
+## 4. Melihat Current Streak dan Longest Streak
+
+* *Current Streak* menunjukkan hari berturut-turut habit berhasil diselesaikan.
+* *Longest Streak* menunjukkan streak terpanjang yang pernah dicapai.
+
+---
+
+## 5. Mengatur Reminder
+
+1. Pilih habit.
+2. Atur waktu reminder.
+3. Simpan pengaturan.
+4. Sistem akan mengirim notifikasi sesuai jadwal.
+
+---
+
+## 6. Melihat Summary
+
+Dashboard menampilkan ringkasan seperti:
+
+* Total habit
+* Habit selesai hari ini
+* Current streak
+* Longest streak
+* Average progress
+* Aktivitas mingguan
+
+---
+
+## 7. Share Progress
+
+1. Pilih habit.
+2. Tekan tombol Share Progress.
+3. Sistem menampilkan data progress.
+4. Tambahkan caption.
+5. Bagikan ke posting wall.
+
+---
+
+## 8. Posting Wall
+
+1. Masuk ke halaman Feed.
+2. Buat postingan baru.
+3. Tambahkan judul, caption, dan gambar.
+4. Pilih habit yang ingin dibagikan.
+5. Posting akan tampil di feed.
+
+---
+
+# Fitur Utama Web
+
+## Authentication
+
+Digunakan untuk login, registrasi, dan pengelolaan akses pengguna.
+
+## CRUD Habit
+
+Digunakan untuk menambah, mengubah, dan menghapus habit.
+
+## Checklist Harian
+
+Digunakan untuk mencatat penyelesaian habit setiap hari.
+
+## Auto Complete
+
+Digunakan untuk mempercepat pencatatan habit yang selesai.
+
+## Current Streak dan Longest Streak
+
+Digunakan untuk menghitung konsistensi pengguna.
+
+## Reminder dan Notifikasi
+
+Digunakan untuk mengingatkan pengguna menjalankan habit.
+
+## Share Progress
+
+Digunakan untuk membagikan progress habit kepada pengguna lain.
+
+## Posting Wall
+
+Digunakan untuk membagikan pencapaian dalam bentuk postingan.
+
+## Summary
+
+Digunakan untuk menampilkan laporan akhir dan statistik habit.
+
+---
+
+# Alur Penggunaan Aplikasi Web
+
+text
+Login
+  ↓
+Dashboard
+  ↓
+Membuat Habit
+  ↓
+Atur Reminder
+  ↓
+Checklist Harian
+  ↓
+Perhitungan Progress
+  ↓
+Perhitungan Streak
+  ↓
+Share Progress
+  ↓
+Posting Wall
+  ↓
+Summary

@@ -523,11 +523,14 @@ export default function ProfilePage() {
   }, [profile])
 
   useEffect(() => {
+    if (!user) return
+    setWallLoading(true)
+    setMyPosts([])
     postService.getMyPosts()
       .then(data => setMyPosts(data))
       .catch(() => {})
       .finally(() => setWallLoading(false))
-  }, [])
+  }, [user?.id])
 
   const totalLikes    = myPosts.reduce((a, p) => a + p.likes_count, 0)
   const totalComments = myPosts.reduce((a, p) => a + p.comments_count, 0)
