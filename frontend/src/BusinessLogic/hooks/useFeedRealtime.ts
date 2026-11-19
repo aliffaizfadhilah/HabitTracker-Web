@@ -64,7 +64,8 @@ export function useFeedRealtime(cursor: number, enabled: boolean): FeedRealtimeR
   const connectSSE = useCallback(() => {
     esRef.current?.close()
 
-    const url = `/api/feed/stream?cursor=${cursorRef.current}`
+    const apiBase = ((import.meta.env.VITE_API_URL as string | undefined) ?? '').replace(/\/$/, '')
+    const url = `${apiBase}/api/feed/stream?cursor=${cursorRef.current}`
     const es   = new EventSource(url, { withCredentials: true })
     esRef.current = es
 

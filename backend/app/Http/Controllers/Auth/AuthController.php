@@ -19,8 +19,9 @@ class AuthController extends Controller
 
     private function jwtCookie(string $token)
     {
-        $secure = request()->isSecure();
-        return cookie('jwt_token', $token, 60 * 24, '/', null, $secure, true, false, 'Lax');
+        $secure   = request()->isSecure() || app()->environment('production');
+        $sameSite = config('session.same_site', 'lax');
+        return cookie('jwt_token', $token, 60 * 24, '/', null, $secure, true, false, $sameSite);
     }
 
     // ── Mobile: kembalikan token di JSON, tidak set cookie ────────────────────

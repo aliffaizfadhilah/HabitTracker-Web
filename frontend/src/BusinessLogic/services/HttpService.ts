@@ -1,4 +1,5 @@
 const PUBLIC_PATHS = ['/', '/login', '/register', '/forgot-password', '/otp-verify']
+const API_BASE = ((import.meta.env.VITE_API_URL as string | undefined) ?? '').replace(/\/$/, '')
 
 class HttpService {
   private static instance: HttpService
@@ -18,6 +19,10 @@ class HttpService {
     }
   }
 
+  private resolveUrl(url: string): string {
+    return url.startsWith('http') ? url : `${API_BASE}${url}`
+  }
+
   private handleUnauthorized(): void {
     if (!PUBLIC_PATHS.includes(window.location.pathname)) {
       window.location.href = '/login'
@@ -33,7 +38,7 @@ class HttpService {
   }
 
   async post<T = unknown>(url: string, body: unknown): Promise<T> {
-    const res = await fetch(url, {
+    const res = await fetch(this.resolveUrl(url), {
       method: 'POST',
       headers: this.getHeaders(),
       credentials: 'include',
@@ -43,7 +48,7 @@ class HttpService {
   }
 
   async get<T = unknown>(url: string): Promise<T> {
-    const res = await fetch(url, {
+    const res = await fetch(this.resolveUrl(url), {
       method: 'GET',
       headers: this.getHeaders(),
       credentials: 'include',
@@ -52,7 +57,7 @@ class HttpService {
   }
 
   async put<T = unknown>(url: string, body: unknown): Promise<T> {
-    const res = await fetch(url, {
+    const res = await fetch(this.resolveUrl(url), {
       method: 'PUT',
       headers: this.getHeaders(),
       credentials: 'include',
@@ -62,7 +67,7 @@ class HttpService {
   }
 
   async patch<T = unknown>(url: string, body: unknown): Promise<T> {
-    const res = await fetch(url, {
+    const res = await fetch(this.resolveUrl(url), {
       method: 'PATCH',
       headers: this.getHeaders(),
       credentials: 'include',
@@ -72,7 +77,7 @@ class HttpService {
   }
 
   async delete<T = unknown>(url: string): Promise<T> {
-    const res = await fetch(url, {
+    const res = await fetch(this.resolveUrl(url), {
       method: 'DELETE',
       headers: this.getHeaders(),
       credentials: 'include',
@@ -81,7 +86,7 @@ class HttpService {
   }
 
   async postMultipart<T = unknown>(url: string, formData: FormData): Promise<T> {
-    const res = await fetch(url, {
+    const res = await fetch(this.resolveUrl(url), {
       method: 'POST',
       headers: { 'Accept': 'application/json' },
       credentials: 'include',

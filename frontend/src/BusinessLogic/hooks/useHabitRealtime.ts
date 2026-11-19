@@ -23,7 +23,8 @@ function _startPoll() {
 
 function _connectSSE() {
   if (_es) return
-  const es = new EventSource('/api/habits/stream', { withCredentials: true })
+  const apiBase = ((import.meta.env.VITE_API_URL as string | undefined) ?? '').replace(/\/$/, '')
+  const es = new EventSource(`${apiBase}/api/habits/stream`, { withCredentials: true })
   _es = es
   es.addEventListener('habits_updated', _notifyAll)
   es.onopen = () => _clearPoll()

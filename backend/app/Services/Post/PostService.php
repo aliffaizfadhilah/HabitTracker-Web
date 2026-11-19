@@ -8,6 +8,7 @@ use App\Repositories\Contracts\PostRepositoryInterface;
 use App\Services\Share\ShareBuilder;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -60,8 +61,12 @@ class PostService
 
     public function create(array $data, UploadedFile $image, int $userId): array
     {
-        $filename = Str::uuid() . '.' . $image->getClientOriginalExtension();
-        $path     = $image->storeAs('posts', $filename, 'public');
+        $path = $this->uploadToCloudinary($image);
+
+        if ($path === null) {
+            $filename = Str::uuid() . '.' . $image->getClientOriginalExtension();
+            $path     = $image->storeAs('posts', $filename, 'public');
+        }
 
         $payload = $this->shareBuilder
             ->withUserId($userId)
@@ -93,7 +98,9 @@ class PostService
             return false;
         }
 
-        Storage::disk('public')->delete($post->image_path);
+        if (!str_starts_with($post->image_path, 'http')) {
+            Storage::disk('public')->delete($post->image_path);
+        }
         $this->postRepo->delete($post);
 
         return true;
@@ -162,11 +169,15 @@ class PostService
 
     public function formatPost(Post $post, int $currentUserId): array
     {
+        $imageUrl = str_starts_with($post->image_path, 'http')
+            ? $post->image_path
+            : '/storage/' . $post->image_path;
+
         return [
             'id'               => $post->id,
             'title'            => $post->title,
             'caption'          => $post->caption,
-            'image_url'        => '/storage/' . $post->image_path,
+            'image_url'        => $imageUrl,
             'habit_title'      => $post->habit_title,
             'progress_percent' => $post->progress_percent !== null ? (float) $post->progress_percent : null,
             'likes_count'      => $post->likes_count,
@@ -183,6 +194,36 @@ class PostService
                 'profile_picture' => $post->user->profile_picture,
             ],
         ];
+    }
+
+    private function uploadToCloudinary(UploadedFile $image): ?string
+    {
+        $cloudName = config('services.cloudinary.cloud_name');
+        $apiKey    = config('services.cloudinary.api_key');
+        $apiSecret = config('services.cloudinary.api_secret');
+
+        if (!$cloudName || !$apiKey || !$apiSecret) {
+            return null;
+        }
+
+        $folder    = config('services.cloudinary.folder', 'habit-tracker/posts');
+        $timestamp = time();
+        $signature = sha1("folder={$folder}&timestamp={$timestamp}{$apiSecret}");
+
+        $response = Http::timeout(30)
+            ->attach('file', file_get_contents($image->getRealPath()), $image->getClientOriginalName())
+            ->post("https://api.cloudinary.com/v1_1/{$cloudName}/image/upload", [
+                'api_key'   => $apiKey,
+                'timestamp' => $timestamp,
+                'folder'    => $folder,
+                'signature' => $signature,
+            ]);
+
+        if ($response->successful() && $response->json('secure_url')) {
+            return $response->json('secure_url');
+        }
+
+        throw new \RuntimeException('Gagal mengunggah gambar ke Cloudinary: ' . $response->body());
     }
 
     private function formatComment(PostComment $comment): array

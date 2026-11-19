@@ -56,3 +56,199 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+
+## ERD
+
+<!-- mermaid-erd-start -->
+```mermaid
+---
+title: 16 tables · 138 columns
+---
+erDiagram
+    activity_logs["activity_logs (6) · ActivityLog"] {
+        bigint id PK
+        bigint id_activity FK
+        date date "cast: date"
+        tinyint status "default: 1"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+    follows["follows (3)"] {
+        bigint id PK
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+    habit_activities["habit_activities (5) · Activity"] {
+        bigint id_activity PK
+        bigint id_habit FK
+        varchar name
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+    habits["habits (16) · Habit"] {
+        bigint id_habit PK
+        varchar username FK
+        varchar title
+        varchar category
+        date periode_start "cast: date"
+        date periode_end "cast: date"
+        int total_period_days "default: 0"
+        int total_completed_days "default: 0"
+        int current_streak "default: 0"
+        int longest_streak "default: 0"
+        decimal progress_percent "cast: decimal:2, default: 0.00"
+        tinyint status "cast: boolean, default: 1"
+        time reminder_time "nullable"
+        tinyint reminder_enabled "cast: boolean, default: 1"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+    notifications["notifications (3) · Notification"] {
+        bigint id PK
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+    post_comments["post_comments (6) · PostComment"] {
+        bigint id PK
+        bigint post_id FK
+        bigint user_id FK
+        text content
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+    post_likes["post_likes (5) · PostLike"] {
+        bigint id PK
+        bigint post_id FK
+        bigint user_id FK
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+    posts["posts (14) · Post"] {
+        bigint id PK
+        bigint user_id FK
+        bigint habit_id "nullable"
+        varchar title
+        text caption "nullable"
+        varchar image_path
+        varchar habit_title "nullable"
+        decimal progress_percent "cast: decimal:2, nullable"
+        int likes_count "default: 0"
+        int comments_count "default: 0"
+        tinyint is_private "cast: boolean, default: 0"
+        varchar frame_style "default: rect"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+    posts_and_notes["posts_and_notes (3)"] {
+        bigint id PK
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+    reports["reports (12) · Report"] {
+        bigint id PK
+        bigint user_id FK "nullable"
+        enum type "default: bug"
+        bigint target_id "nullable"
+        varchar reason "nullable"
+        text note "nullable"
+        varchar page "nullable"
+        varchar browser "nullable"
+        enum status "default: pending"
+        timestamp resolved_at "cast: datetime, nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+    roles["roles (5) · Role"] {
+        bigint id PK
+        varchar role_name UK
+        text description "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+    shetabit_visits["shetabit_visits (19)"] {
+        bigint id PK
+        varchar method "nullable"
+        mediumtext request "nullable"
+        mediumtext url "nullable"
+        mediumtext referer "nullable"
+        text languages "nullable"
+        text useragent "nullable"
+        text headers "nullable"
+        text device "nullable"
+        text platform "nullable"
+        text browser "nullable"
+        varchar ip "nullable"
+        json geo_raw "nullable"
+        varchar visitable_type "polymorphic, nullable"
+        bigint visitable_id "polymorphic, nullable"
+        varchar visitor_type "polymorphic, nullable"
+        bigint visitor_id "polymorphic, nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+    user_roles["user_roles (5)"] {
+        bigint id PK
+        bigint user_id FK
+        bigint role_id FK
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+    user_tokens["user_tokens (3)"] {
+        bigint id PK
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+    users["users (19) · User"] {
+        bigint id PK
+        varchar username UK
+        varchar email UK
+        varchar google_id "nullable"
+        varchar otp_code "nullable"
+        timestamp otp_expires_at "cast: datetime, nullable"
+        varchar password
+        varchar salt "nullable"
+        varchar full_name "nullable"
+        text bio "nullable"
+        varchar profile_picture "nullable"
+        date date_of_birth "nullable"
+        varchar gender "nullable"
+        time reminder_time "nullable"
+        tinyint reminder_enabled "default: 0"
+        tinyint is_verified "default: 0"
+        tinyint is_active "default: 1"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+    visitor_logs["visitor_logs (14) · VisitorLog"] {
+        bigint id PK
+        varchar ip_address
+        varchar country "nullable"
+        varchar city "nullable"
+        varchar session_id "nullable"
+        varchar device_type "nullable"
+        varchar browser "nullable"
+        varchar browser_version "nullable"
+        varchar os "nullable"
+        varchar language "nullable"
+        varchar page "default: /"
+        varchar referer "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+    habit_activities ||--o{ activity_logs : "has many via id_activity, cascade delete"
+    habits ||--o{ habit_activities : "has many via id_habit, cascade delete"
+    users ||--o{ habits : "has many via username, cascade delete"
+    posts ||--o{ post_comments : "has many via post_id, cascade delete"
+    users ||--o{ post_comments : "has many via user_id, cascade delete"
+    posts ||--o{ post_likes : "pivot, has many via post_id, cascade delete"
+    users ||--o{ post_likes : "pivot, has many via user_id, cascade delete"
+    users ||--o{ posts : "has many via user_id, cascade delete"
+    habits |o--o{ posts : "guessed has many via habit_id, no index"
+    users |o--o{ reports : "has many via user_id, set null delete"
+    roles ||--o{ user_roles : "pivot, has many via role_id, cascade delete"
+    users ||--o{ user_roles : "pivot, has many via user_id, cascade delete"
+%% Unmapped polymorphic relations (add to config 'mermaid-erd.polymorphic_relationships'):
+%%   shetabit_visits.visitable (visitable_type + visitable_id)
+%%   shetabit_visits.visitor (visitor_type + visitor_id)
+```
+<!-- mermaid-erd-end -->
