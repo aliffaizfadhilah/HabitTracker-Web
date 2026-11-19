@@ -82,7 +82,6 @@ class NotificationService {
           icon: '/favicon.svg',
           badge: '/favicon.svg',
           tag: 'habit-reminder',
-          renotify: true,
         })
         notif.onclick = () => {
           window.focus()

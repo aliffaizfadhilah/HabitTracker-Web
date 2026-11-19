@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import ReactDOM from 'react-dom'
 import { X, RotateCcw, Loader2, AlertCircle } from 'lucide-react'
 

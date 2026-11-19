@@ -1,5 +1,5 @@
 import { http } from '../services/HttpService'
-import type { HabitGridItem, HabitFormData } from '../factories/HabitFormFactory'
+import type { HabitGridItem } from '../factories/HabitFormFactory'
 
 class HabitRepository {
   private cache: HabitGridItem[] | null = null

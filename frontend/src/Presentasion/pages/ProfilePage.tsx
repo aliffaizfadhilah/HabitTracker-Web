@@ -179,7 +179,7 @@ function CommentItem({ c, currentUsername, onDelete }: {
   )
 }
 
-function PostLightbox({ post, onClose, onDelete, currentUsername }: {
+export function PostLightbox({ post, onClose, onDelete, currentUsername }: {
   post: Post; onClose: () => void; onDelete: (id: number) => void; currentUsername: string | null
 }) {
   const [imgError,        setImgError]        = useState(false)
@@ -530,7 +530,7 @@ export default function ProfilePage() {
       .then(data => setMyPosts(data))
       .catch(() => {})
       .finally(() => setWallLoading(false))
-  }, [user?.id])
+  }, [user?.username])
 
   const totalLikes    = myPosts.reduce((a, p) => a + p.likes_count, 0)
   const totalComments = myPosts.reduce((a, p) => a + p.comments_count, 0)
@@ -559,11 +559,6 @@ export default function ProfilePage() {
     setSaving(false)
     if (result.success) showToast('success', 'Profil berhasil diperbarui!')
     else showToast('error', result.message)
-  }
-
-  const handleDeletePost = (id: number) => {
-    setMyPosts(prev => prev.filter(p => p.id !== id))
-    showToast('success', 'Postingan berhasil dihapus.')
   }
 
   return (

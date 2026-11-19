@@ -125,7 +125,7 @@ const HabitStreakCard: React.FC<{
   habit:     HabitStreak
   onRefetch: () => Promise<void>
   onReport:  (habit: HabitStreak) => void
-}> = ({ habit, onRefetch, onReport }) => {
+}> = ({ habit, onReport }) => {
   const today      = new Date().toISOString().slice(0, 10)
   const progress   = Number(habit.progress_percent)
   const isComplete = habitCompletionService.isComplete(habit)
